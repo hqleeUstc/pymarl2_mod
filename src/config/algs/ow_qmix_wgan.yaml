@@ -17,7 +17,7 @@ t_max: 10050000
 agent_output_type: "q"
 learner: "max_q_learner"
 double_q: True
-mixer: "qmix_bak"
+mixer: "qmix_wgan"
 mixing_embed_dim: 32
 hypernet_layers: 2
 hypernet_embed: 64

@@ -1,11 +1,12 @@
 from modules.agents import REGISTRY as agent_REGISTRY
 from components.action_selectors import REGISTRY as action_REGISTRY
 import torch as th
-from .basic_controller import BasicMAC
+# from .basic_controller import BasicMAC
+from .basic_controller import BasicMAC_bak
 
 
 # This multi-agent controller shares parameters between agents
-class LICAMAC(BasicMAC):
+class LICAMAC(BasicMAC_bak):
     def select_actions(self, ep_batch, t_ep, t_env, bs=slice(None), test_mode=False):
         # Only select actions for the selected batch elements in bs
         avail_actions = ep_batch["avail_actions"][:, t_ep]

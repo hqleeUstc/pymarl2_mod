@@ -4,7 +4,7 @@ import torch as th
 
 
 # This multi-agent controller shares parameters between agents
-class BasicMAC:
+class BasicMAC_bak:
     def __init__(self, scheme, groups, args):
         self.n_agents = args.n_agents
         self.args = args

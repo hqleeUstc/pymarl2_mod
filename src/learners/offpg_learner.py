@@ -6,7 +6,11 @@ from modules.critics.offpg import OffPGCritic
 import torch as th
 from utils.rl_utils import build_td_lambda_targets, build_target_q
 from torch.optim import Adam
-from modules.mixers.qmix import QMixer
+from modules.mixers.qmix import QMixer_bak
+from modules.mixers.qmix import QMixer_WGAN
+from modules.mixers.qmix import QMixer_WGAN_v2
+
+from modules.mixers.qmix import QMixer_ICNN
 from utils.th_utils import get_parameters_num
 
 

@@ -1,7 +1,10 @@
 import copy
 from components.episode_buffer import EpisodeBatch
 from modules.mixers.vdn import VDNMixer
-from modules.mixers.qmix import QMixer
+from modules.mixers.qmix import QMixer_WGAN
+from modules.mixers.qmix import QMixer_WGAN_v2
+from modules.mixers.qmix import QMixer_ICNN
+from modules.mixers.qmix import QMixer_bak
 from modules.mixers.qmix_central_no_hyper import QMixerCentralFF
 from utils.rl_utils import build_td_lambda_targets
 import torch as th
@@ -26,11 +29,33 @@ class MAXQLearner:
         if args.mixer is not None:
             if args.mixer == "vdn":
                 self.mixer = VDNMixer()
-            elif args.mixer == "qmix":
-                self.mixer = QMixer(args)
+            elif args.mixer == "qmix_wgan":
+                self.mixer = QMixer_WGAN(args)
+
+                for p in self.mixer.parameters():
+                    p.data = th.randn(p.shape, dtype=th.float32) / 20.
+            elif args.mixer == "qmix_wgan_v2":
+                self.mixer = QMixer_WGAN_v2(args)
+
+                for p in self.mixer.parameters():
+                    p.data = th.randn(p.shape, dtype=th.float32) / 20.
+            elif args.mixer == "qmix_icnn":
+                self.mixer = QMixer_ICNN(args)
+
+                for p in self.mixer.parameters():
+                    p.data = th.randn(p.shape, dtype=th.float32) / 20.
+            elif args.mixer == "qmix_bak":
+                self.mixer = QMixer_bak(args)
+
+                for p in self.mixer.parameters():
+                    p.data = th.randn(p.shape, dtype=th.float32) / 20.
+
             else:
                 raise ValueError("Mixer {} not recognised.".format(args.mixer))
+
+            print("lhq mixer_params")
             self.mixer_params = list(self.mixer.parameters())
+            print("lhq params")
             self.params += list(self.mixer.parameters())
             self.target_mixer = copy.deepcopy(self.mixer)
 
@@ -190,9 +215,18 @@ class MAXQLearner:
         agent_norm = agent_norm ** (1. / 2)
 
         mixer_norm = 0
+        b1 = 0
         for p in self.mixer_params:
-            param_norm = p.grad.data.norm(2)
+            a1 = p.grad
+            # if a1 is None:
+            #     print("a1 is None")
+            # if a1 is not None:
+            # b1 += 1
+            param_norm = a1.data.norm(2)
             mixer_norm += param_norm.item() ** 2
+        # print("b1 = " + str(b1))
+        param_norm = 0
+        mixer_norm = 0
         mixer_norm = mixer_norm ** (1. / 2)
         self.mixer_norm = mixer_norm
         self.mixer_norms.append(mixer_norm)

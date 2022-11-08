@@ -5,7 +5,11 @@ from modules.critics.lica import LICACritic
 import torch as th
 from torch.optim import RMSprop, Adam
 from modules.mixers.vdn import VDNMixer
-from modules.mixers.qmix import QMixer
+from modules.mixers.qmix import QMixer_bak
+from modules.mixers.qmix import QMixer_WGAN
+from modules.mixers.qmix import QMixer_WGAN_v2
+
+from modules.mixers.qmix import QMixer_ICNN
 from components.action_selectors import categorical_entropy
 from utils.rl_utils import build_td_lambda_targets
 from components.epsilon_schedules import DecayThenFlatSchedule

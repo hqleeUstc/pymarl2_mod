@@ -1,6 +1,9 @@
 import copy
 from components.episode_buffer import EpisodeBatch
-from modules.mixers.nmix import Mixer
+from modules.mixers.nmix import Mixer_bak
+from modules.mixers.nmix import Mixer_wgan_v3
+from modules.mixers.nmix import Mixer_wgan_v2
+from modules.mixers.nmix import Mixer_wgan
 from modules.mixers.vdn import VDNMixer
 from modules.mixers.qatten import QattenMixer
 from envs.matrix_game import print_matrix_status
@@ -24,10 +27,22 @@ class NQLearner:
             self.mixer = QattenMixer(args)
         elif args.mixer == "vdn":
             self.mixer = VDNMixer()
-        elif args.mixer == "qmix":
-            self.mixer = Mixer(args)
+        elif args.mixer == "qmix_bak":
+            self.mixer = Mixer_bak(args)
+        elif args.mixer == "qmix_wgan":
+            self.mixer = Mixer_wgan(args)
+        elif args.mixer == "qmix_wgan_v2":
+            self.mixer = Mixer_wgan_v2(args)
+        elif args.mixer == "qmix_wgan_v3":
+            self.mixer = Mixer_wgan_v3(args)
         else:
             raise "mixer error"
+
+        # initialize    
+        for p in self.mixer.parameters():
+            p.data = th.randn(p.shape, dtype=th.float32) / 20.
+
+
         self.target_mixer = copy.deepcopy(self.mixer)
         self.params += list(self.mixer.parameters())
 

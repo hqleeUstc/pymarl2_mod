@@ -1,6 +1,7 @@
 REGISTRY = {}
 
-from .basic_controller import BasicMAC
+# from .basic_controller import BasicMAC
+from .basic_controller import BasicMAC_bak
 from .n_controller import NMAC
 from .ppo_controller import PPOMAC
 from .conv_controller import ConvMAC
@@ -8,7 +9,7 @@ from .basic_central_controller import CentralBasicMAC
 from .lica_controller import LICAMAC
 from .dop_controller import DOPMAC
 
-REGISTRY["basic_mac"] = BasicMAC
+REGISTRY["basic_mac"] = BasicMAC_bak
 REGISTRY["n_mac"] = NMAC
 REGISTRY["ppo_mac"] = PPOMAC
 REGISTRY["conv_mac"] = ConvMAC

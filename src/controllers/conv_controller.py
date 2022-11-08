@@ -1,12 +1,14 @@
 from modules.agents import REGISTRY as agent_REGISTRY
 from components.action_selectors import REGISTRY as action_REGISTRY
-from .basic_controller import BasicMAC
+# from .basic_controller import BasicMAC
+from .basic_controller import BasicMAC_bak
+
 import torch as th
 from utils.rl_utils import RunningMeanStd
 import numpy as np
 
 # This multi-agent controller shares parameters between agents
-class ConvMAC(BasicMAC):
+class ConvMAC(BasicMAC_bak):
     def __init__(self, scheme, groups, args):
         super(ConvMAC, self).__init__(scheme, groups, args)
         self.buffer = []
