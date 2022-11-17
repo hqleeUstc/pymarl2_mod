@@ -25,6 +25,10 @@ def run(_run, _config, _log):
     args = SN(**_config)
     args.device = "cuda" if args.use_cuda else "cpu"
 
+    print("hqlee drop_run.py" + args.device)
+    if th.cuda.is_available():
+        print("hqlee th.cuda.is_available() = true")
+
     # setup loggers
     logger = Logger(_log)
 

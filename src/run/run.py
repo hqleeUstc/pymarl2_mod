@@ -32,6 +32,14 @@ def run(_run, _config, _log):
 
     # setup loggers
     logger = Logger(_log)
+    # if args.buffer_cpu_only == True:
+    #     a1 = "1"
+    # else:
+    #     a1 = "0"
+    # print("hqlee run.py" + args.device + " " + a1)
+    # if th.cuda.is_available():
+    #     print("hqlee th.cuda.is_available() = true")
+    print(args)
 
     _log.info("Experiment Parameters:")
     experiment_params = pprint.pformat(_config,
@@ -123,7 +131,9 @@ def run_sequential(args, logger):
     # Learner
     learner = le_REGISTRY[args.learner](mac, buffer.scheme, logger, args)
 
+    # print("hqlee learner cuda?")
     if args.use_cuda:
+        # print("hqlee learner cuda? " + "1" )
         learner.cuda()
 
     if args.checkpoint_path != "":
@@ -190,6 +200,7 @@ def run_sequential(args, logger):
             episode_sample = episode_sample[:, :max_ep_t]
 
             if episode_sample.device != args.device:
+                # print("hqlee episode_sample.to(args.device) " + args.device)
                 episode_sample.to(args.device)
 
             learner.train(episode_sample, runner.t_env, episode)
@@ -231,11 +242,12 @@ def run_sequential(args, logger):
 
 
 def args_sanity_check(config, _log):
-
+    # print("hqlee use_cuda")
     # set CUDA flags
     # config["use_cuda"] = True # Use cuda whenever possible!
     if config["use_cuda"] and not th.cuda.is_available():
         config["use_cuda"] = False
+        # print("hqlee use_cuda = false")
         _log.warning("CUDA flag use_cuda was switched OFF automatically because no CUDA devices are available!")
 
     if config["test_nepisode"] < config["batch_size_run"]:

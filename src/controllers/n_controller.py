@@ -25,6 +25,7 @@ class NMAC(BasicMAC_bak):
             
         agent_inputs = self._build_inputs(ep_batch, t)
         avail_actions = ep_batch["avail_actions"][:, t]
+        # 这里是每个agent输出Q_a
         agent_outs, self.hidden_states = self.agent(agent_inputs, self.hidden_states)
 
         return agent_outs
