@@ -13,6 +13,8 @@ from torch.optim import RMSprop, Adam
 import numpy as np
 from utils.th_utils import get_parameters_num
 from torch.distributions import Categorical
+from torch.autograd import Variable
+
 
 class NQLearner:
     def __init__(self, mac, scheme, logger, args):
@@ -159,26 +161,52 @@ class NQLearner:
         chosen_action_qvals = th.gather(mac_out[:, :-1], dim=3, index=actions).squeeze(3)  # Remove the last dim
         chosen_action_qvals = self.mixer(chosen_action_qvals, batch["state"][:, :-1])
     
+        # chosen_action_qvals_cMax = chosen_action_qvals.clone()
+        # chosen_max_actions_cGlobalMax = actions.clone()
+        # # chosen_max_actions_cg = actions.clone()
+        # # 接下来选max Q_target的actions，求cur_max_actions
+        # chosen_max_actions_c = actions.clone()
+
+        # for agentn in range(self.args.n_agents):
+        #     for actionn in range(self.args.n_actions):
+        #         # update the actionn of agentn
+        #         # chosen_max_actions_c[:, :, agentn] = actionn
+
+        #         chosen_max_agent_qvals_c = th.gather(mac_out[:, :-1], 3, chosen_max_actions_c).squeeze(3)     # chosen_max_actions_c
+        #         chosen_max_qvals_c = self.mixer(chosen_max_agent_qvals_c, batch["state"][:, :-1])
+        #         # if higher q_val, then replace the max-q-val-action and the corresponding max q_val
+        #         condition = (chosen_max_qvals_c > chosen_action_qvals_cMax)
+        #         chosen_action_qvals_cMax = th.where(condition, chosen_max_qvals_c, chosen_action_qvals_cMax)
+        #         chosen_max_actions_cGlobalMax[:, :, agentn] = th.where(condition,
+        #                 chosen_max_actions_c[:, :, agentn], chosen_max_actions_cGlobalMax[:, :, agentn])
+
+        #         chosen_max_actions_c = chosen_max_actions_cGlobalMax
+
+
         chosen_action_qvals_cMax = chosen_action_qvals.clone().detach()
         chosen_max_actions_cGlobalMax = actions.clone().detach()
-        chosen_max_actions_cg = actions.clone().detach()
+        chosen_max_actions_c = actions.clone().detach()
         # 接下来选max Q_target的actions，求cur_max_actions
-        chosen_max_actions_c = chosen_max_actions_cg.clone().detach()
+        with th.no_grad():
+            for agentn in range(self.args.n_agents):
+                for actionn in range(self.args.n_actions):
+                    # update the actionn of agentn
+                    chosen_max_actions_c[:, :, agentn] = actionn 
+                    chosen_max_agent_qvals_c = th.gather(mac_out[:, :-1], 3, chosen_max_actions_c).squeeze(3)     # chosen_max_actions_c
+                    chosen_max_qvals_c = self.mixer(chosen_max_agent_qvals_c, batch["state"][:, :-1])
 
-        for agentn in range(self.args.n_agents):
-            for actionn in range(self.args.n_actions):
-                # update the actionn of agentn
-                chosen_max_actions_c[:, :, agentn] = actionn
+                    # if higher q_val, then replace the max-q-val-action and the corresponding max q_val
+                    condition = (chosen_max_qvals_c > chosen_action_qvals_cMax)
+                    chosen_action_qvals_cMax = th.where(condition, chosen_max_qvals_c, chosen_action_qvals_cMax)
+                    chosen_max_actions_cGlobalMax[:, :, agentn] = th.where(condition,
+                            chosen_max_actions_c[:, :, agentn], chosen_max_actions_cGlobalMax[:, :, agentn])
 
-                chosen_max_agent_qvals_c = th.gather(mac_out[:, :-1], 3, chosen_max_actions_c).squeeze(3)     # chosen_max_actions_c
-                chosen_max_qvals_c = self.mixer(chosen_max_agent_qvals_c, batch["state"][:, :-1])
-                # if higher q_val, then replace the max-q-val-action and the corresponding max q_val
-                condition = (chosen_max_qvals_c > chosen_action_qvals_cMax)
-                chosen_action_qvals_cMax = th.where(condition, chosen_max_qvals_c, chosen_action_qvals_cMax)
-                chosen_max_actions_cGlobalMax[:, :, agentn] = th.where(condition,
-                        chosen_max_actions_c[:, :, agentn], chosen_max_actions_cGlobalMax[:, :, agentn])
+                    chosen_max_actions_c = chosen_max_actions_cGlobalMax
+                        
 
-                chosen_max_actions_c = chosen_max_actions_cGlobalMax
+        chosen_max_qtot_f = th.gather(mac_out[:, :-1], 3, chosen_max_actions_c).squeeze(3)     # chosen_max_actions_c
+        chosen_max_qtot_f = self.mixer(chosen_max_qtot_f, batch["state"][:, :-1])
+
                     
 
         # terminated = [False for _ in range(batch.batch_size)]
@@ -199,7 +227,6 @@ class NQLearner:
         # chosen_max_qtot_f = th.gather(mac_out[:, :], 3, chosen_max_actions_f_qtot_Max).squeeze(3)     # chosen_max_actions_c
         # chosen_max_qtot_f = self.mixer(chosen_max_qtot_f, batch["state"][:, :-1])
 
-        chosen_max_qtot_f = chosen_action_qvals_cMax
 
         # td_error = (chosen_action_qvals - targets.detach())
         td_error = (chosen_max_qtot_f - targets.detach())        # chosen_action_qvals_cMax
