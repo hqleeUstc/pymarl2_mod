@@ -12,7 +12,6 @@ import torch as th
 from torch.optim import RMSprop, Adam
 import numpy as np
 from utils.th_utils import get_parameters_num
-from torch.distributions import Categorical
 
 class NQLearner:
     def __init__(self, mac, scheme, logger, args):
@@ -85,8 +84,9 @@ class NQLearner:
             mac_out.append(agent_outs)
         mac_out = th.stack(mac_out, dim=1)  # Concat over time
 
-        
-        
+        # Pick the Q-Values for the actions taken by each agent
+        chosen_action_qvals = th.gather(mac_out[:, :-1], dim=3, index=actions).squeeze(3)  # Remove the last dim
+        chosen_action_qvals_ = chosen_action_qvals
 
         # Calculate the Q-Values necessary for the target
         with th.no_grad():
@@ -101,48 +101,14 @@ class NQLearner:
             target_mac_out = th.stack(target_mac_out, dim=1)  # Concat across time
 
             # Max over target Q-Values/ Double q learning
-            mac_out_detach_for_actions = mac_out.clone().detach()
             mac_out_detach = mac_out.clone().detach()
+            mac_out_detach[avail_actions == 0] = -9999999
+            cur_max_actions = mac_out_detach.max(dim=3, keepdim=True)[1]
+            target_max_qvals = th.gather(target_mac_out, 3, cur_max_actions).squeeze(3)
             
-            # current max qvals and actions
-            mac_out_detach_for_actions[avail_actions == 0] = -9999999
-            cur_max_actions_for_target = mac_out_detach_for_actions.max(dim=3, keepdim=True)[1]
-            chosen_action_qvals_for_target = th.gather(mac_out_detach[:,:], dim=3, index=cur_max_actions_for_target).squeeze(3)  # Remove the last dim
-            chosen_action_qvals_for_target = self.mixer(chosen_action_qvals_for_target, batch["state"])
-            # avail = (avail_actions[:, :, 0, 0] == 0) | (avail_actions[:, :, 1, 0] == 0) | (avail_actions[:, :, 2, 0] == 0)
-            # for actionn in range(self.args.n_actions) - 1:
-            #     action_tmp = actionn + 1
-            #     avail |= (avail_actions[:, :, 0, action_tmp] == 0) | (avail_actions[:, :, 1, action_tmp] == 0) | (avail_actions[:, :, 2, action_tmp] == 0) 
-            # chosen_action_qvals_for_target[avail.unsqueeze(-1)] = -9999999
-           
-            chosen_action_qvals_for_target_cMax = chosen_action_qvals_for_target.clone().detach()
-            cur_max_actions_cGlobalMax = cur_max_actions_for_target.clone().detach()
-            cur_max_actions_target_cg = cur_max_actions_for_target.clone().detach()
-            cur_max_actions_target = cur_max_actions_for_target.clone()
-            # 接下来选max Q_target的actions，求cur_max_actions
+            # Calculate n-step Q-Learning targets
+            target_max_qvals = self.target_mixer(target_max_qvals, batch["state"])
 
-            for agentn in range(self.args.n_agents):
-                for actionn in range(self.args.n_actions):
-                    cur_max_actions_target[:, :, agentn] = actionn   
-                    chosen_action_qvals_for_target = th.gather(mac_out_detach, dim=3, index=cur_max_actions_target).squeeze(3)  # Remove the last dim
-                    chosen_action_qvals_for_target = self.mixer(chosen_action_qvals_for_target, batch["state"])
-                    avail = (avail_actions[:, :, agentn, actionn] == 0)
-                    chosen_action_qvals_for_target[avail.unsqueeze(-1)] = -9999999
-                    condition = (chosen_action_qvals_for_target > chosen_action_qvals_for_target_cMax)
-                    
-                    chosen_action_qvals_for_target_cMax = th.where(condition, chosen_action_qvals_for_target, chosen_action_qvals_for_target_cMax)
-                    cur_max_actions_cGlobalMax[:, :, agentn] = th.where(condition,
-                        cur_max_actions_target[:, :, agentn], cur_max_actions_cGlobalMax[:, :, agentn])
-                    
-                    print("qmix_max_qvals_cMax[2:5, 2:5, 0]: ", chosen_action_qvals_for_target_cMax[2:5, 2:5, 0])
-                    cur_max_actions_target = cur_max_actions_cGlobalMax
-
-
-            target_max_qvals = chosen_action_qvals_for_target_cMax
-            # # Calculate n-step Q-Learning targets
-            # target_max_qvals = th.gather(target_mac_out, 3, cur_max_actions_target).squeeze(3)
-            # target_max_qvals = self.target_mixer(target_max_qvals, batch["state"])
-           
             if getattr(self.args, 'q_lambda', False):
                 qvals = th.gather(target_mac_out, 3, batch["actions"]).squeeze(3)
                 qvals = self.target_mixer(qvals, batch["state"])
@@ -153,56 +119,10 @@ class NQLearner:
                 targets = build_td_lambda_targets(rewards, terminated, mask, target_max_qvals, 
                                                     self.args.n_agents, self.args.gamma, self.args.td_lambda)
 
-
-        # current max qvals and actions
-        # Pick the Q-Values for the actions taken by each agent
-        chosen_action_qvals = th.gather(mac_out[:, :-1], dim=3, index=actions).squeeze(3)  # Remove the last dim
+        # Mixer
         chosen_action_qvals = self.mixer(chosen_action_qvals, batch["state"][:, :-1])
-    
-        chosen_action_qvals_cMax = chosen_action_qvals.clone().detach()
-        chosen_max_actions_cGlobalMax = actions.clone().detach()
-        chosen_max_actions_cg = actions.clone().detach()
-        # 接下来选max Q_target的actions，求cur_max_actions
-        chosen_max_actions_c = chosen_max_actions_cg.clone().detach()
 
-        for agentn in range(self.args.n_agents):
-            for actionn in range(self.args.n_actions):
-                # update the actionn of agentn
-                chosen_max_actions_c[:, :, agentn] = actionn
-
-                chosen_max_agent_qvals_c = th.gather(mac_out[:, :-1], 3, chosen_max_actions_c).squeeze(3)     # chosen_max_actions_c
-                chosen_max_qvals_c = self.mixer(chosen_max_agent_qvals_c, batch["state"][:, :-1])
-                # if higher q_val, then replace the max-q-val-action and the corresponding max q_val
-                condition = (chosen_max_qvals_c > chosen_action_qvals_cMax)
-                chosen_action_qvals_cMax = th.where(condition, chosen_max_qvals_c, chosen_action_qvals_cMax)
-                chosen_max_actions_cGlobalMax[:, :, agentn] = th.where(condition,
-                        chosen_max_actions_c[:, :, agentn], chosen_max_actions_cGlobalMax[:, :, agentn])
-
-                chosen_max_actions_c = chosen_max_actions_cGlobalMax
-                    
-
-        # terminated = [False for _ in range(batch.batch_size)]
-        # envs_not_terminated = [b_idx for b_idx, termed in enumerate(terminated) if not termed]
-        # bs=envs_not_terminated
-        # avail_actions_used = avail_actions[bs]
-
-
-        # random_numbers = th.rand_like(mac_out[:, :, 0])
-        # pick_random = (random_numbers < self.mac.get_epsilon()).long()
-        # random_actions = Categorical(avail_actions_used.float()).sample().long()
-
-        # picked_actions = pick_random * random_actions + (1 - pick_random) * chosen_max_actions_c
-
-
-        # # chosen_max_actions_f_qtot_Max = picked_actions
-        # chosen_max_actions_f_qtot_Max = chosen_max_actions_c
-        # chosen_max_qtot_f = th.gather(mac_out[:, :], 3, chosen_max_actions_f_qtot_Max).squeeze(3)     # chosen_max_actions_c
-        # chosen_max_qtot_f = self.mixer(chosen_max_qtot_f, batch["state"][:, :-1])
-
-        chosen_max_qtot_f = chosen_action_qvals_cMax
-
-        # td_error = (chosen_action_qvals - targets.detach())
-        td_error = (chosen_max_qtot_f - targets.detach())        # chosen_action_qvals_cMax
+        td_error = (chosen_action_qvals - targets.detach())
         td_error2 = 0.5 * td_error.pow(2)
 
         mask = mask.expand_as(td_error2)
@@ -230,7 +150,7 @@ class NQLearner:
             self.logger.log_stat("grad_norm", grad_norm, t_env)
             mask_elems = mask.sum().item()
             self.logger.log_stat("td_error_abs", (masked_td_error.abs().sum().item()/mask_elems), t_env)
-            self.logger.log_stat("q_taken_mean", (chosen_max_qtot_f * mask).sum().item()/(mask_elems * self.args.n_agents), t_env)
+            self.logger.log_stat("q_taken_mean", (chosen_action_qvals * mask).sum().item()/(mask_elems * self.args.n_agents), t_env)
             self.logger.log_stat("target_mean", (targets * mask).sum().item()/(mask_elems * self.args.n_agents), t_env)
             self.log_stats_t = t_env
             
