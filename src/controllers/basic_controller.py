@@ -16,13 +16,18 @@ class BasicMAC_bak:
         self.save_probs = getattr(self.args, 'save_probs', False)
 
         self.hidden_states = None
+        self.episilon = 0
 
     def select_actions(self, ep_batch, t_ep, t_env, bs=slice(None), test_mode=False):
         # Only select actions for the selected batch elements in bs
         avail_actions = ep_batch["avail_actions"][:, t_ep]
         agent_outputs = self.forward(ep_batch, t_ep, test_mode=test_mode)
         chosen_actions = self.action_selector.select_action(agent_outputs[bs], avail_actions[bs], t_env, test_mode=test_mode)
+        self.epsilon = self.action_selector.get_epsilon()
         return chosen_actions
+
+    def get_epsilon(self):
+        return self.epsilon
 
     def forward(self, ep_batch, t, test_mode=False):
         agent_inputs = self._build_inputs(ep_batch, t)

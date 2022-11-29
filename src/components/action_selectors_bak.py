@@ -139,8 +139,6 @@ class EpsilonGreedyActionSelector():
 
         picked_actions = pick_random * random_actions + (1 - pick_random) * masked_q_values.max(dim=2)[1]
         return picked_actions
-    def get_epsilon(self):
-        return self.epsilon
 
 
 REGISTRY["epsilon_greedy"] = EpsilonGreedyActionSelector

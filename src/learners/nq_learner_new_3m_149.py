@@ -86,9 +86,20 @@ class NQLearnerNew:
         mac_out = th.stack(mac_out, dim=1)  # Concat over time
 
         
-        # Pick the Q-Values for the actions taken by each agent
+        # Mixer
         chosen_action_qvals = th.gather(mac_out[:, :-1], dim=3, index=actions).squeeze(3)  # Remove the last dim
+        # chosen_action_qvals_ = chosen_action_qvals
         chosen_action_qvals = self.mixer(chosen_action_qvals, batch["state"][:, :-1])
+
+        
+        # target_max_qvals_cMax = target_max_qvals.clone().detach()
+        # cur_max_actions_cGlobalMax = cur_max_actions.clone().detach()
+        
+        # # Calculate n-step Q-Learning targets
+        # target_max_qvals = self.target_mixer(target_max_qvals, batch["state"])
+
+
+        # Pick the Q-Values for the actions taken by each agent
 
         # Calculate the Q-Values necessary for the target
         with th.no_grad():
@@ -103,20 +114,16 @@ class NQLearnerNew:
             target_mac_out = th.stack(target_mac_out, dim=1)  # Concat across time
 
             # Max over target Q-Values/ Double q learning
-            mac_out_detach_for_actions = mac_out.clone().detach()
+            # mac_out_detach_bak = mac_out.clone().detach()
+            # mac_out_detach_bak[avail_actions == 0] = -9999999
             mac_out_detach = mac_out.clone().detach()
             
             # current max qvals and actions
-            mac_out_detach_for_actions[avail_actions == 0] = -9999999
-            cur_max_actions_for_target = mac_out_detach_for_actions.max(dim=3, keepdim=True)[1]
+            # Mixer
+            cur_max_actions_for_target = mac_out_detach.max(dim=3, keepdim=True)[1]
             chosen_action_qvals_for_target = th.gather(mac_out_detach[:,:], dim=3, index=cur_max_actions_for_target).squeeze(3)  # Remove the last dim
+
             chosen_action_qvals_for_target = self.mixer(chosen_action_qvals_for_target, batch["state"])
-            # avail = (avail_actions[:, :, 0, 0] == 0) | (avail_actions[:, :, 1, 0] == 0) | (avail_actions[:, :, 2, 0] == 0)
-            # for actionn in range(self.args.n_actions) - 1:
-            #     action_tmp = actionn + 1
-            #     avail |= (avail_actions[:, :, 0, action_tmp] == 0) | (avail_actions[:, :, 1, action_tmp] == 0) | (avail_actions[:, :, 2, action_tmp] == 0) 
-            # chosen_action_qvals_for_target[avail.unsqueeze(-1)] = -9999999
-           
             chosen_action_qvals_for_target_cMax = chosen_action_qvals_for_target.clone().detach()
             cur_max_actions_cGlobalMax = cur_max_actions_for_target.clone().detach()
             cur_max_actions_target_cg = cur_max_actions_for_target.clone().detach()
@@ -124,9 +131,18 @@ class NQLearnerNew:
             # 接下来选max Q_target的actions，求cur_max_actions
 
             for agentn in range(self.args.n_agents):
+                # cur_max_actions_c = cur_max_actions_cg.clone() #cur_max_actions_cg.clone()
+                # avail_actions_c = avail_actions_cg.clone()
+
                 for actionn in range(self.args.n_actions):
+                          # available actions
                     cur_max_actions_target[:, :, agentn] = actionn   
-                    chosen_action_qvals_for_target = th.gather(mac_out_detach, dim=3, index=cur_max_actions_target).squeeze(3)  # Remove the last dim
+                    chosen_action_qvals_for_target = th.gather(mac_out, dim=3, index=cur_max_actions_target).squeeze(3)  # Remove the last dim
+                    # chosen_qmix_action_qvals = self.mixer(qmix_action_qvals, batch["state"][:, :-1])
+
+                    # central_target_max_agent_qvals_c = th.gather(target_mac_out[:, :], 3,
+                    # cur_max_actions_c[:,:].unsqueeze(4).repeat(1,1,1,1,self.args.n_actions)).squeeze(3)
+                    # central_target_max_agent_qvals_c = th.gather(target_mac_out[:, :], 3, cur_max_actions_c).squeeze(3)
                     chosen_action_qvals_for_target = self.mixer(chosen_action_qvals_for_target, batch["state"])
                     avail = (avail_actions[:, :, agentn, actionn] == 0)
                     chosen_action_qvals_for_target[avail.unsqueeze(-1)] = -9999999
@@ -166,6 +182,7 @@ class NQLearnerNew:
         # 接下来选max Q_target的actions，求cur_max_actions
         chosen_max_actions_c = chosen_max_actions_cg.clone().detach()
 
+    # 把avail_actions = 0 的qval改为-999999
         for agentn in range(self.args.n_agents):
             for actionn in range(self.args.n_actions):
                 # update the actionn of agentn

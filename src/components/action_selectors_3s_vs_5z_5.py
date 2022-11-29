@@ -110,7 +110,7 @@ def categorical_entropy(probs):
     return Categorical(probs=probs).entropy()
 
 
-class EpsilonGreedyActionSelector():
+class EpsilonGreedyActionSelector_3s_vs_5z():
 
     def __init__(self, args):
         self.args = args
@@ -132,6 +132,8 @@ class EpsilonGreedyActionSelector():
         # mask actions that are excluded from selection
         masked_q_values = agent_inputs.clone()
         masked_q_values[avail_actions == 0] = -float("inf")  # should never be selected!
+
+        max_q_values = masked_q_values.max(dim=2)[1]
         
         random_numbers = th.rand_like(agent_inputs[:, :, 0])
         pick_random = (random_numbers < self.epsilon).long()
@@ -139,8 +141,6 @@ class EpsilonGreedyActionSelector():
 
         picked_actions = pick_random * random_actions + (1 - pick_random) * masked_q_values.max(dim=2)[1]
         return picked_actions
-    def get_epsilon(self):
-        return self.epsilon
 
 
 REGISTRY["epsilon_greedy"] = EpsilonGreedyActionSelector
