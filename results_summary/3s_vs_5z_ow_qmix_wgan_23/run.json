@@ -1,0 +1,96 @@
+{
+  "artifacts": [],
+  "command": "my_main",
+  "experiment": {
+    "base_dir": "/root/autodl-tmp/marl/pymarl2/src",
+    "dependencies": [
+      "munch==2.5.0",
+      "numpy==1.22.4",
+      "PyYAML==5.3.1",
+      "sacred==0.8.2",
+      "torch==1.11.0+cu113"
+    ],
+    "mainfile": "main.py",
+    "name": "pymarl",
+    "repositories": [
+      {
+        "commit": "07e387278e246f5d5ec9b8d37605470b77d2b4c0",
+        "dirty": true,
+        "url": "https://github.com/hijkzzz/pymarl2.git"
+      },
+      {
+        "commit": "07e387278e246f5d5ec9b8d37605470b77d2b4c0",
+        "dirty": true,
+        "url": "https://github.com/hijkzzz/pymarl2.git"
+      }
+    ],
+    "sources": [
+      [
+        "main.py",
+        "_sources/main_b3ff5451593b67cd33b9ec035b3b4842.py"
+      ],
+      [
+        "utils/logging.py",
+        "_sources/logging_ce9a261c391cbeae67129d3d806d06da.py"
+      ]
+    ]
+  },
+  "heartbeat": "2022-11-06T23:41:45.946694",
+  "host": {
+    "ENV": {},
+    "cpu": "Intel(R) Xeon(R) Platinum 8350C CPU @ 2.60GHz",
+    "gpus": {
+      "driver_version": "515.57",
+      "gpus": [
+        {
+          "model": "NVIDIA GeForce RTX 3090",
+          "persistence_mode": true,
+          "total_memory": 24576
+        }
+      ]
+    },
+    "hostname": "container-762911b63c-ddb53b55",
+    "os": [
+      "Linux",
+      "Linux-5.4.0-125-generic-x86_64-with-glibc2.17"
+    ],
+    "python_version": "3.8.10"
+  },
+  "meta": {
+    "command": "my_main",
+    "options": {
+      "--beat-interval": null,
+      "--capture": null,
+      "--comment": null,
+      "--debug": false,
+      "--enforce_clean": false,
+      "--file_storage": null,
+      "--force": false,
+      "--help": false,
+      "--loglevel": null,
+      "--mongo_db": null,
+      "--name": null,
+      "--pdb": false,
+      "--print-config": false,
+      "--priority": null,
+      "--queue": false,
+      "--s3": null,
+      "--sql": null,
+      "--tiny_db": null,
+      "--unobserved": false,
+      "COMMAND": null,
+      "UPDATE": [
+        "env_args.map_name=3s_vs_5z",
+        "w=0.5",
+        "epsilon_anneal_time=100000",
+        "t_max=3005000"
+      ],
+      "help": false,
+      "with": true
+    }
+  },
+  "resources": [],
+  "result": null,
+  "start_time": "2022-11-06T21:28:55.565912",
+  "status": "RUNNING"
+}
