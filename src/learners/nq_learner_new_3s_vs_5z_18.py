@@ -105,8 +105,8 @@ class NQLearnerNew:
             mac_out_detach = mac_out.clone().detach()
             
             # current max qvals and actions
-            mac_out_detach_for_actions[avail_actions == 0] = -9999999
-            cur_max_actions_for_target = mac_out_detach_for_actions.max(dim=3, keepdim=True)[1]
+            mac_out_detach_for_actions[avail_actions == 0] = 9999999
+            cur_max_actions_for_target = mac_out_detach_for_actions.min(dim=3, keepdim=True)[1]
             chosen_action_qvals_for_target = th.gather(mac_out_detach[:,:], dim=3, index=cur_max_actions_for_target).squeeze(3)  # Remove the last dim
             chosen_action_qvals_for_target = self.mixer(chosen_action_qvals_for_target, batch["state"])
             # avail = (avail_actions[:, :, 0, 0] == 0) | (avail_actions[:, :, 1, 0] == 0) | (avail_actions[:, :, 2, 0] == 0)
