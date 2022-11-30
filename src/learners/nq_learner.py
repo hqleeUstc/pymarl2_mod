@@ -104,13 +104,13 @@ class NQLearner:
             mac_out_detach = mac_out.clone().detach()
             
             # current max qvals and actions
-            mac_out_detach_for_actions[avail_actions == 0] = -9999999
-            cur_max_actions_for_target = mac_out_detach_for_actions.max(dim=3, keepdim=True)[1]
-            chosen_action_qvals_for_target = th.gather(mac_out_detach[:,:], dim=3, index=cur_max_actions_for_target).squeeze(3)  # Remove the last dim
-            chosen_action_qvals_for_target = self.mixer(chosen_action_qvals_for_target, batch["state"])
+            mac_out_detach_for_actions[avail_actions == 0] = 9999999
+            cur_max_actions_for_target = mac_out_detach_for_actions.min(dim=3, keepdim=True)[1]
+            chosen_qvals_for_target_cMax = th.gather(mac_out_detach[:,:], dim=3, index=cur_max_actions_for_target).squeeze(3)  # Remove the last dim
+            chosen_qvals_for_target_cMax = self.mixer(chosen_qvals_for_target_cMax, batch["state"])
 
-            chosen_action_qvals_for_target_cMax = chosen_action_qvals_for_target.clone().detach()
-            cur_max_actions_cGlobalMax = cur_max_actions_for_target.clone().detach()
+            # chosen_qvals_for_target_cMax = chosen_action_qvals_for_target.clone()
+            cur_max_actions_cGlobalMax = cur_max_actions_for_target.clone()
             cur_max_actions_target = cur_max_actions_for_target.clone()
             # 接下来选max Q_target的actions，求cur_max_actions
 
@@ -121,16 +121,16 @@ class NQLearner:
                     chosen_action_qvals_for_target = self.mixer(chosen_action_qvals_for_target, batch["state"])
                     avail = (avail_actions[:, :, agentn, actionn] == 0)
                     chosen_action_qvals_for_target[avail.unsqueeze(-1)] = -9999999
-                    condition = (chosen_action_qvals_for_target > chosen_action_qvals_for_target_cMax)
+                    condition = (chosen_action_qvals_for_target > chosen_qvals_for_target_cMax)
                     
-                    chosen_action_qvals_for_target_cMax = th.where(condition, chosen_action_qvals_for_target, chosen_action_qvals_for_target_cMax)
+                    chosen_qvals_for_target_cMax = th.where(condition, chosen_action_qvals_for_target, chosen_qvals_for_target_cMax)
                     cur_max_actions_cGlobalMax[:, :, agentn] = th.where(condition,
-                        cur_max_actions_target[:, :, agentn], cur_max_actions_cGlobalMax[:, :, agentn])
+                        actionn, cur_max_actions_cGlobalMax[:, :, agentn])
                     
-                    print("qmix_max_qvals_cMax[2:5, 2:5, 0]: ", chosen_action_qvals_for_target_cMax[2:5, 2:5, 0])
+                    print("qmix_max_qvals_cMax[2:5, 2:5, 0]: ", chosen_qvals_for_target_cMax[2:5, 2:5, 0])
                     cur_max_actions_target = cur_max_actions_cGlobalMax
 
-            # target_max_qvals = chosen_action_qvals_for_target_cMax
+            # target_max_qvals = chosen_qvals_for_target_cMax
             # # Calculate n-step Q-Learning targets
             target_max_qvals = th.gather(target_mac_out, 3, cur_max_actions_target).squeeze(3)
             target_max_qvals = self.target_mixer(target_max_qvals, batch["state"])
@@ -148,34 +148,33 @@ class NQLearner:
 
         # current max qvals and actions
         # Pick the Q-Values for the actions taken by each agent
-        chosen_action_qvals = th.gather(mac_out[:, :-1], dim=3, index=actions).squeeze(3)  # Remove the last dim
-        chosen_action_qvals = self.mixer(chosen_action_qvals, batch["state"][:, :-1])
+        chosen_qvals_cMax = th.gather(mac_out[:, :-1], dim=3, index=actions).squeeze(3)  # Remove the last dim
+        chosen_qvals_cMax = self.mixer(chosen_qvals_cMax, batch["state"][:, :-1])
     
-        chosen_action_qvals_cMax = chosen_action_qvals.clone().detach()
-        chosen_max_actions_cGlobalMax = actions.clone().detach()
-        chosen_max_actions_c = actions.clone().detach()
+        # chosen_action_qvals_cMax = chosen_action_qvals.clone().detach()
+        chosen_actions_cGlobalMax = actions.clone().detach()
+        chosen_actions_c = actions.clone().detach()
         # 接下来选max Q_target的actions，求cur_max_actions
         with th.no_grad():
             for agentn in range(self.args.n_agents):
                 for actionn in range(self.args.n_actions):
                     # update the actionn of agentn
-                    chosen_max_actions_c[:, :, agentn] = actionn 
-                    chosen_max_agent_qvals_c = th.gather(mac_out[:, :-1], 3, chosen_max_actions_c).squeeze(3)     # chosen_max_actions_c
-                    chosen_max_qvals_c = self.mixer(chosen_max_agent_qvals_c, batch["state"][:, :-1])
+                    chosen_actions_c[:, :, agentn] = actionn 
+                    chosen_qvals_c = th.gather(mac_out[:, :-1], 3, chosen_actions_c).squeeze(3)     # chosen_max_actions_c
+                    chosen_qvals_c = self.mixer(chosen_qvals_c, batch["state"][:, :-1])
 
                     # if higher q_val, then replace the max-q-val-action and the corresponding max q_val
-                    condition = (chosen_max_qvals_c > chosen_action_qvals_cMax)
-                    chosen_action_qvals_cMax = th.where(condition, chosen_max_qvals_c, chosen_action_qvals_cMax)
-                    chosen_max_actions_cGlobalMax[:, :, agentn] = th.where(condition,
-                            chosen_max_actions_c[:, :, agentn], chosen_max_actions_cGlobalMax[:, :, agentn])
+                    condition = (chosen_qvals_c > chosen_qvals_cMax)
+                    chosen_qvals_cMax = th.where(condition, chosen_qvals_c, chosen_qvals_cMax)
+                    chosen_actions_cGlobalMax[:, :, agentn] = th.where(condition,
+                            actionn, chosen_actions_cGlobalMax[:, :, agentn])
 
-                    chosen_max_actions_c = chosen_max_actions_cGlobalMax
+                    chosen_actions_c = chosen_actions_cGlobalMax
                         
 
-        chosen_max_qtot_f = th.gather(mac_out[:, :-1], 3, chosen_max_actions_c).squeeze(3)     # chosen_max_actions_c
+        chosen_max_qtot_f = th.gather(mac_out[:, :-1], 3, chosen_actions_c).squeeze(3)     # chosen_max_actions_c
         chosen_max_qtot_f = self.mixer(chosen_max_qtot_f, batch["state"][:, :-1])
 
-                    
 
         # terminated = [False for _ in range(batch.batch_size)]
         # envs_not_terminated = [b_idx for b_idx, termed in enumerate(terminated) if not termed]
