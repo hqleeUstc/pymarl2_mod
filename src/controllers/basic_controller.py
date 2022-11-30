@@ -24,7 +24,7 @@ class BasicMAC_bak:
         agent_outputs = self.forward(ep_batch, t_ep, test_mode=test_mode)
         chosen_actions = self.action_selector.select_action(agent_outputs[bs], avail_actions[bs], t_env, test_mode=test_mode)
         self.epsilon = self.action_selector.get_epsilon()
-        return chosen_actions
+        return chosen_actions, avail_actions
 
     def get_epsilon(self):
         return self.epsilon

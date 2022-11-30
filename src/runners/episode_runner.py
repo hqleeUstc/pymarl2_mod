@@ -64,15 +64,17 @@ class EpisodeRunner:
 
             # Pass the entire batch of experiences up till now to the agents
             # Receive the actions for each agent at this timestep in a batch of size 1
-            actions = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
+            actions, avail_actions_bs = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
             # Fix memory leak
             cpu_actions = actions.to("cpu").numpy()
+            cpu_avail_actions_bs = avail_actions_bs.to("cpu").numpy()
             
             reward, terminated, env_info = self.env.step(actions[0])
             episode_return += reward
 
             post_transition_data = {
                 "actions": cpu_actions,
+                "avail_actions_bs": cpu_avail_actions_bs,
                 "reward": [(reward,)],
                 "terminated": [(terminated != env_info.get("episode_limit", False),)],
             }
@@ -89,10 +91,12 @@ class EpisodeRunner:
         self.batch.update(last_data, ts=self.t)
 
         # Select actions in the last stored state
-        actions = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
+        actions, avail_actions_bs = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, test_mode=test_mode)
         # Fix memory leak
         cpu_actions = actions.to("cpu").numpy()
-        self.batch.update({"actions": cpu_actions}, ts=self.t)
+        cpu_avail_actions_bs = avail_actions_bs.to("cpu").numpy()
+
+        self.batch.update({"actions": cpu_actions, "avail_actions_bs": cpu_avail_actions_bs}, ts=self.t)
         
         cur_stats = self.test_stats if test_mode else self.train_stats
         cur_returns = self.test_returns if test_mode else self.train_returns

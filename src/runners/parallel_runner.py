@@ -104,13 +104,15 @@ class ParallelRunner:
             if save_probs:
                 actions, probs = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, bs=envs_not_terminated, test_mode=test_mode)
             else:
-                actions = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, bs=envs_not_terminated, test_mode=test_mode)
+                actions, avail_actions_bs = self.mac.select_actions(self.batch, t_ep=self.t, t_env=self.t_env, bs=envs_not_terminated, test_mode=test_mode)
                 
             cpu_actions = actions.to("cpu").numpy()
+            cpu_avail_actions_bs = avail_actions_bs.to("cpu").numpy()
 
             # Update the actions taken
             actions_chosen = {
                 "actions": actions.unsqueeze(1).to("cpu"),
+                "avail_actions_bs": avail_actions_bs.to("cpu"),
             }
             if save_probs:
                 actions_chosen["probs"] = probs.unsqueeze(1).to("cpu")
