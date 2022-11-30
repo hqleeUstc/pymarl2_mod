@@ -8,6 +8,8 @@ python src/main.py --config=qmix_wgan_nqlearner_new --env-config=sc2 with env_ar
 
 python src/main.py --config=qmix_bak --env-config=sc2 with env_args.map_name=3m  epsilon_anneal_time=100000 t_max=1005000
 
+python src/main.py --config=qmix_wgan --env-config=sc2 with env_args.map_name=3s_vs_5z  epsilon_anneal_time=100000 t_max=10050000
+
 
 python src/main.py --config=qmix_wgan --env-config=sc2 with env_args.map_name=3m  epsilon_anneal_time=100000 t_max=10050000
 sleep 3

@@ -104,8 +104,8 @@ class NQLearner:
             mac_out_detach = mac_out.clone().detach()
             
             # current max qvals and actions
-            mac_out_detach_for_actions[avail_actions == 0] = 9999999
-            cur_max_actions_for_target = mac_out_detach_for_actions.min(dim=3, keepdim=True)[1]
+            mac_out_detach_for_actions[avail_actions == 0] = -9999999
+            cur_max_actions_for_target = mac_out_detach_for_actions.max(dim=3, keepdim=True)[1]
             chosen_action_qvals_for_target = th.gather(mac_out_detach[:,:], dim=3, index=cur_max_actions_for_target).squeeze(3)  # Remove the last dim
             chosen_action_qvals_for_target = self.mixer(chosen_action_qvals_for_target, batch["state"])
 
@@ -130,10 +130,10 @@ class NQLearner:
                     print("qmix_max_qvals_cMax[2:5, 2:5, 0]: ", chosen_action_qvals_for_target_cMax[2:5, 2:5, 0])
                     cur_max_actions_target = cur_max_actions_cGlobalMax
 
-            target_max_qvals = chosen_action_qvals_for_target_cMax
+            # target_max_qvals = chosen_action_qvals_for_target_cMax
             # # Calculate n-step Q-Learning targets
-            # target_max_qvals = th.gather(target_mac_out, 3, cur_max_actions_target).squeeze(3)
-            # target_max_qvals = self.target_mixer(target_max_qvals, batch["state"])
+            target_max_qvals = th.gather(target_mac_out, 3, cur_max_actions_target).squeeze(3)
+            target_max_qvals = self.target_mixer(target_max_qvals, batch["state"])
            
             if getattr(self.args, 'q_lambda', False):
                 qvals = th.gather(target_mac_out, 3, batch["actions"]).squeeze(3)

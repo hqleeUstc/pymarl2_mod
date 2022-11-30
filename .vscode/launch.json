@@ -17,7 +17,7 @@
             // "args": ["--config=ow_qmix_wgan", "--env-config=sc2", "with", "env_args.map_name=3s_vs_5z", "w=0.5", "epsilon_anneal_time=100000", "t_max=3005000"]
             // "args": ["--config=ow_qmix_wgan_v2", "--env-config=sc2", "with", "env_args.map_name=3s_vs_5z", "w=0.5", "epsilon_anneal_time=100000", "t_max=3005000"]        
             // "args": ["--config=ow_qmix_icnn", "--env-config=sc2", "with", "env_args.map_name=3s_vs_5z", "w=0.5", "epsilon_anneal_time=100000", "t_max=3005000"]
-            "args": ["--config=qmix_wgan_nqlearner_new", "--env-config=sc2", "with", "env_args.map_name=3m", "epsilon_anneal_time=100000", "t_max=1005000"]
+            "args": ["--config=qmix_wgan", "--env-config=sc2", "with", "env_args.map_name=3s_vs_5z", "epsilon_anneal_time=100000", "t_max=1005000"]
             // "args": ["--config=qmix_wgan_v2", "--env-config=sc2", "with", "env_args.map_name=3m", "epsilon_anneal_time=100000", "t_max=1005000"]
             // "args": ["--config=qmix_wgan_v3", "--env-config=sc2", "with", "env_args.map_name=3m", "epsilon_anneal_time=100000", "t_max=1005000"]
             // qmix_wgan_nqlearner_new      qmix_wgan
