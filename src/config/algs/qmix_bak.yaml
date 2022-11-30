@@ -22,7 +22,7 @@ mac: "n_mac"
 agent: "n_rnn"
 agent_output_type: q
 
-learner: "nq_learner"
+learner: "nq_learner_bak"
 mixer: "qmix_bak"
 mixing_embed_dim: 32
 hypernet_embed: 64
